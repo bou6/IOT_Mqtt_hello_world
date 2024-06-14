@@ -1,6 +1,8 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 
+// define the pin for the pump
+#define PUMP_PIN 2
 // SSID and password for the ESP32 Access Point
 const char* ap_ssid = "ESP32-AP";
 const char* ap_password = "12345678";
@@ -10,6 +12,10 @@ ESP8266WebServer server(80);
 
 void setup() {
   Serial.begin(115200);
+
+  // Set up the pump pin
+  pinMode(PUMP_PIN, OUTPUT);
+
   
   // Set up the Access Point
   WiFi.softAP(ap_ssid, ap_password);
@@ -23,6 +29,7 @@ void setup() {
   // Define the server routes
   server.on("/", HTTP_GET, handleRoot);
   server.on("/connect", HTTP_POST, handleConnect);
+  server.on("/status", HTTP_GET, handleStatus);
 
   // Start the server
   server.begin();
@@ -31,6 +38,14 @@ void setup() {
 
 void loop() {
   server.handleClient();
+
+  // toggle a pump pin every 5 seconds
+  Serial.println("Pump ON");
+  delay(5000);
+  digitalWrite(PUMP_PIN, HIGH);
+  delay(5000);
+  Serial.println("Pump OFF");
+  digitalWrite(PUMP_PIN, LOW);
 }
 
 // Function to handle the root path "/"
@@ -76,6 +91,20 @@ void handleConnect() {
     response += WiFi.localIP().toString();
   } else {
     response += "Failed to connect.";
+  }
+  
+  response += "</p><a href='/'>Back</a></body></html>";
+  server.send(200, "text/html", response);
+}
+
+void handleStatus() {
+  String response = "<html><body><h1>Connection Status</h1><p>";
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    response += "Connected! IP address: ";
+    response += WiFi.localIP().toString();
+  } else {
+    response += "Not connected.";
   }
   
   response += "</p><a href='/'>Back</a></body></html>";
